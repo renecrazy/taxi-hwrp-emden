@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Taxi Emden RP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+    --yellow:#FFD200;
+    --bg:#0f0f0f;
+    --card:#1b1b1b;
+    --text:#ffffff;
+    --accent:#2c2c2c;
+}
+body {
+    margin:0;
+    font-family:Segoe UI, Arial;
+    background:var(--bg);
+    color:var(--text);
+}
+.header {
+    background:linear-gradient(90deg,#FFD200,#ffe680);
+    padding:20px;
+    text-align:center;
+    font-size:26px;
+    font-weight:800;
+}
+.nav {
+    background:#000;
+    display:flex;
+    justify-content:center;
+    gap:15px;
+    padding:10px;
+}
+.nav button {
+    background:none;
+    border:none;
+    color:white;
+    font-weight:600;
+    cursor:pointer;
+}
+.container {
+    max-width:1100px;
+    margin:30px auto;
+}
+.card {
+    background:var(--card);
+    padding:25px;
+    border-radius:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.5);
+    margin-bottom:25px;
+}
+input, select, textarea {
+    width:100%;
+    padding:14px;
+    margin-bottom:12px;
+    border-radius:10px;
+    border:none;
+    background:var(--accent);
+    color:white;
+}
+.btn {
+    background:var(--yellow);
+    border:none;
+    padding:14px;
+    border-radius:12px;
+    font-weight:700;
+    cursor:pointer;
+    width:100%;
+}
+.page { display:none; }
+.page.active { display:block; }
+.admin-box {
+    background:#111;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:10px;
+}
+.fab {
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    background:var(--yellow);
+    padding:14px 18px;
+    border:none;
+    border-radius:50px;
+    font-weight:bold;
+    cursor:pointer;
+}
+.admin-btn { bottom:80px; }
+</style>
+</head>
+
+<body>
+
+<div class="header">🚕 Taxi Emden RP</div>
+
+<div class="nav">
+    <button onclick="show('taxi')">Taxi</button>
+    <button onclick="show('license')">Führerschein</button>
+    <button onclick="show('driver')">Fahrer</button>
+</div>
+
+<div class="container">
+
+<!-- TAXI -->
+<div id="taxi" class="page active card">
+<h2>Taxi buchen</h2>
+<input id="t_name" placeholder="Roblox Name">
+<input id="t_from" placeholder="Abholort">
+<input id="t_to" placeholder="Zielort">
+<select id="t_type"><option>Normal</option><option>Express</option><option>Event</option></select>
+<select id="t_pay"><option>Barzahlung</option><option>Kartenzahlung</option></select>
+<button class="btn" onclick="taxi()">Taxi anfordern</button>
+</div>
+
+<!-- LICENSE -->
+<div id="license" class="page card">
+<h2>Führerschein beantragen</h2>
+<input id="l_name" placeholder="Roblox Name">
+<select id="l_type"><option>PKW</option><option>LKW</option><option>Motorrad</option></select>
+<textarea id="l_text" placeholder="Begründung"></textarea>
+<button class="btn" onclick="license()">Antrag senden</button>
+</div>
+
+<!-- DRIVER -->
+<div id="driver" class="page card">
+<h2>Fahrer Bewerbung</h2>
+<input id="d_name" placeholder="Roblox Name">
+<input id="d_age" placeholder="Alter">
+<textarea id="d_exp" placeholder="RP-Erfahrung"></textarea>
+<button class="btn" onclick="driver()">Bewerbung senden</button>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="page card">
+<h2>Admin Panel</h2>
+
+<h3>🚕 Fahrten</h3>
+<div id="rides"></div>
+
+<h3>👤 Fahrer Status</h3>
+<div id="drivers"></div>
+
+<h3>🧾 Logs</h3>
+<div id="logs"></div>
+</div>
+
+</div>
+
+<button class="fab admin-btn" onclick="adminLogin()">Admin</button>
+
+<script>
+const webhook = "DEIN_DISCORD_WEBHOOK_HIER";
+const adminCode = "taxi-hwrp";
+const adminUsers = ["rene_crazy"];
+
+let rideList = [];
+let logList = [];
+let driverStatus = {};
+
+function show(id){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+function log(text){
+    logList.unshift(text);
+}
+
+function adminLogin(){
+    const user = prompt("Roblox Username:");
+    const code = prompt("Admin Code:");
+    if(adminUsers.includes(user) && code === adminCode){
+        show("admin");
+        renderAdmin();
+    } else {
+        alert("Zugriff verweigert");
+    }
+}
+
+function renderAdmin(){
+    rides.innerHTML = rideList.map(r=>`
+        <div class="admin-box">
+        <b>${r.name}</b><br>
+        ${r.from} ➜ ${r.to}<br>
+        ${r.type} | ${r.pay}<br>
+        ${r.time}
+        </div>
+    `).join("");
+
+    drivers.innerHTML = Object.keys(driverStatus).map(d=>`
+        <div class="admin-box">
+        ${d} – <b>${driverStatus[d]}</b>
+        <button onclick="toggleDriver('${d}')">Status wechseln</button>
+        </div>
+    `).join("");
+
+    logs.innerHTML = logList.map(l=>`<div class="admin-box">${l}</div>`).join("");
+}
+
+function toggleDriver(name){
+    driverStatus[name] = driverStatus[name] === "Frei" ? "Beschäftigt" : "Frei";
+    log(`Fahrer ${name} Status geändert`);
+    renderAdmin();
+}
+
+function taxi(){
+    const ride = {
+        name:t_name.value,
+        from:t_from.value,
+        to:t_to.value,
+        type:t_type.value,
+        pay:t_pay.value,
+        time:new Date().toLocaleTimeString()
+    };
+    rideList.unshift(ride);
+    log(`Taxi bestellt von ${ride.name}`);
+    send("🚕 Taxi Anfrage", JSON.stringify(ride,null,2));
+    alert("Taxi bestellt");
+}
+
+function license(){
+    log(`Führerschein Antrag von ${l_name.value}`);
+    send("📄 Führerschein Antrag", `${l_name.value} – ${l_type.value}`);
+    alert("Antrag gesendet");
+}
+
+function driver(){
+    driverStatus[d_name.value] = "Frei";
+    log(`Fahrer Bewerbung von ${d_name.value}`);
+    send("👤 Fahrer Bewerbung", `${d_name.value} – ${d_age.value}`);
+    alert("Bewerbung gesendet");
+}
+
+function send(title,msg){
+    fetch(webhook,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({embeds:[{title:title,description:msg,color:16766720}]})
+    });
+}
+</script>
+
+</body>
+</html>
